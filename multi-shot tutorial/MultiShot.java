@@ -126,7 +126,7 @@ public class MultiShot extends AirAbility implements AddonAbility {
 		damage = 2;
 		
 		//If you want to make the range and damage different for each shot,
-		//You need to keep track of range and damage using a list similar to what we
+		//You need to keep track of range and damage using a hashmap similar to what we
 		//did for different directions and starting locations.
 		
 		//Time limit to shoot all of the projectiles.
@@ -136,7 +136,7 @@ public class MultiShot extends AirAbility implements AddonAbility {
 		//Shooting time of last projectile is startTime because we just shot our first projectile.
 		lastShotTime = getStartTime();
 		
-		//Initialize the lists.
+		//Initialize the hashmaps.
 		deadProjectiles = new HashMap<Integer, Location>();
 		locations = new HashMap<Integer, Location>();
 		directions = new HashMap<Integer, Vector>();
@@ -207,7 +207,7 @@ public class MultiShot extends AirAbility implements AddonAbility {
 			
 			//Move i'th projectile to it's next position.
 			locations.get(i).add(directions.get(i).clone().multiply(speed));
-			//If it is out of range or it hit a block, add it to the temporary list to remove later.
+			//If it is out of range or it hit a block, add it to the temporary hashmap to remove later.
 			if (locations.get(i).distance(startLocations.get(i)) > range
 					|| GeneralMethods.isSolid(locations.get(i).getBlock())) {
 				deadProjectiles.put(i, locations.get(i));
@@ -216,13 +216,13 @@ public class MultiShot extends AirAbility implements AddonAbility {
 		
 		//Our loop that progress all of the projectiles is over.
 		//Now we can safely remove the dead projectiles from every
-		//list we used that projectile in.
+		//hashmap we used that projectile in.
 		for(Integer i : deadProjectiles.keySet()) {
 			locations.remove(i);
 			directions.remove(i);
 			startLocations.remove(i);
 		}
-		//Finally, we clear our temporary list.
+		//Finally, we clear our temporary hashmap.
 		deadProjectiles.clear();
 		
 	}
@@ -260,17 +260,17 @@ public class MultiShot extends AirAbility implements AddonAbility {
 		return this.timeBetweenShots;
 	}
 	
-	//We use this method to get this instance of your ability's locations array.
+	//We use this method to get this instance of your ability's locations hashmap.
 	public HashMap<Integer, Location> getParticleLocations() {
 		return this.locations;
 	}
 	
-	//We use this method to get this instance of your ability's directions array.
+	//We use this method to get this instance of your ability's directions hashmap.
 	public HashMap<Integer, Vector> getDirections() {
 		return this.directions;
 	}
 	
-	//We use this method to get this instance of your ability's startLocations array.
+	//We use this method to get this instance of your ability's startLocations hashmap.
 	public HashMap<Integer, Location> getStartLocations() {
 		return this.startLocations;
 	}
