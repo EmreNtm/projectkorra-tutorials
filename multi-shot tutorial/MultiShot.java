@@ -1,6 +1,5 @@
 package Hiro3;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.bukkit.Location;
@@ -39,14 +38,16 @@ public class MultiShot extends AirAbility implements AddonAbility {
 	private long timeBetweenShots;
 	//A temporary variable for keeping track of last shot time. It is required to put delay between shots.
 	private long lastShotTime;
+	//Holding last projectile's unique id. Later, we will use this in hasmap as a key.
+	private int lastProjectileId;
 	
-	//Each shot has different location so we use a list to keep track of them.
-	private ArrayList<Location> locations;
-	//Each shot has different directions so we use a list to keep track of them.
-	private ArrayList<Vector> directions;
-	//Each shot has different starting location so we use a list to keep track of them.
-	private ArrayList<Location> startLocations;
-	//This hashmap is required for removing shots when they touch an entity, a block or when they are out of range.
+	//Each shot has different location so we use a hashmap to keep track of them. Key of this hashmap is the id of projectile.
+	private HashMap<Integer, Location> locations;
+	//Each shot has different directions so we use a hashmap to keep track of them. Key of this hashmap is the id of projectile.
+	private HashMap<Integer, Vector> directions;
+	//Each shot has different starting location so we hashmap to keep track of them. Key of this hashmap is the id of projectile.
+	private HashMap<Integer, Location> startLocations;
+	//This hashmap is required for removing shots when they touch an entity, a block or when they are out of range. Key of this hashmap is the id of projectile.
 	private HashMap<Integer, Location> deadProjectiles;
 	
 	public MultiShot(Player player) {
@@ -81,19 +82,23 @@ public class MultiShot extends AirAbility implements AddonAbility {
 				bPlayer.addCooldown(ms);
 			}
 			
+			//Determine the id of your new projectile. (It is the last id + 1)
+			int projectileId = ms.getLastProjectileId() + 1;
 			//Create the starting location of your projectile.
 			Location loc = player.getLocation().add(0, 1, 0);
-			//Add that location to ms's array of locations.
+			//Add that location to ms's hashmap of locations.
 			//Adding new location to ms means you are adding new projectile to your move.
-			ms.getParticleLocations().add(loc);
-			//Set direction of this new projectile and add it to ms's directions list.
-			ms.getDirections().add(player.getLocation().getDirection());
-			//Set starting location of this new projectile and add it to ms's direction list.
-			ms.getStartLocations().add(loc.clone());
+			ms.getParticleLocations().put(projectileId, loc);
+			//Set direction of this new projectile and add it to ms's directions hashmap.
+			ms.getDirections().put(projectileId, player.getLocation().getDirection());
+			//Set starting location of this new projectile and add it to ms's direction hashmap.
+			ms.getStartLocations().put(projectileId, loc.clone());
 			//Set last shot time of ms to current time because we just shot a new projectile.
 			ms.setLastShotTime(System.currentTimeMillis());
 			//Decrease the number of projectiles you can shoot by 1.
 			ms.setCharge(ms.getCharge() - 1);
+			//Update last projectile id to this projectile's id.
+			ms.setLastProjectileId(projectileId);
 			
 			//Notice that even tho your ability is triggered by clicking, we are not starting a new move.
 			//Instead, we are using the ability that is already active and update it's variables to make it
@@ -133,21 +138,23 @@ public class MultiShot extends AirAbility implements AddonAbility {
 		
 		//Initialize the lists.
 		deadProjectiles = new HashMap<Integer, Location>();
-		locations = new ArrayList<Location>();
-		directions = new ArrayList<Vector>();
-		startLocations = new ArrayList<Location>();
+		locations = new HashMap<Integer, Location>();
+		directions = new HashMap<Integer, Vector>();
+		startLocations = new HashMap<Integer, Location>();
 		
+		//Creating an id for our first projectile.
+		lastProjectileId = 1;
 		//Create the starting location of first projectile.
 		Location loc = player.getLocation().add(0, 1, 0);
-		//Add it to array of locations. This array holds each projectile's current location.
-		locations.add(loc);
-		//Add first projectile's direction to array of directions.
-		//This array holds each projectile's direction.
-		directions.add(player.getLocation().getDirection());
-		//Add first projectile's starting location to array of starting locations.
-		//This array holds each projectile's starting location.
-		//We are using startingg locations when we check for the range.
-		startLocations.add(loc.clone());
+		//Add it to hashmap of locations. This hashmap holds each projectile's current location.
+		locations.put(lastProjectileId, loc);
+		//Add first projectile's direction to hashmap of directions.
+		//This hashmap holds each projectile's direction.
+		directions.put(lastProjectileId, player.getLocation().getDirection());
+		//Add first projectile's starting location to hashmap of starting locations.
+		//This hashmap holds each projectile's starting location.
+		//We are using starting locations when we check for the range.
+		startLocations.put(lastProjectileId, loc.clone());
 		
 		//Decrease the charge by 1 because we just shot our first projectile.
 		charge--;
@@ -157,7 +164,7 @@ public class MultiShot extends AirAbility implements AddonAbility {
 	public void progress() {
 		
 		//If no charge left (So you cannot shoot more projectiles,
-		//and location list empty (So all of the projectiles are dead)
+		//and location hashmap is empty (So all of the projectiles are dead)
 		//we can remove the move. (We won't add cooldown because we added it
 		//when we shot the last projectile.)
 		if (charge == 0 && locations.isEmpty()) {
@@ -172,7 +179,7 @@ public class MultiShot extends AirAbility implements AddonAbility {
 		}
 		
 		//This for loop below is the thing that progress every projectile.
-		//i is the projectile number.
+		//i is the projectile's id.
 		
 		//What this for does is, for each projectile:
 		//spawn the particle,
@@ -180,7 +187,7 @@ public class MultiShot extends AirAbility implements AddonAbility {
 		//move the projectile to it's next position.
 		//check for the range,
 		//check if the projectile hits a block.
-		for (int i = 0; i < locations.size(); i++) {
+		for (Integer i : locations.keySet()) {
 			//Spawn your i'th projectile's particle at it's location
 			player.getWorld().spawnParticle(Particle.SPELL, locations.get(i), 0);
 			
@@ -211,9 +218,9 @@ public class MultiShot extends AirAbility implements AddonAbility {
 		//Now we can safely remove the dead projectiles from every
 		//list we used that projectile in.
 		for(Integer i : deadProjectiles.keySet()) {
-			locations.remove(locations.get(i));
-			directions.remove(directions.get(i));
-			startLocations.remove(startLocations.get(i));
+			locations.remove(i);
+			directions.remove(i);
+			startLocations.remove(i);
 		}
 		//Finally, we clear our temporary list.
 		deadProjectiles.clear();
@@ -228,6 +235,14 @@ public class MultiShot extends AirAbility implements AddonAbility {
 	//We use this method to update this instance of your ability's charge value.
 	public void setCharge(int charge) {
 		this.charge = charge;
+	}
+	
+	public int getLastProjectileId() {
+		return this.lastProjectileId;
+	}
+	
+	public void setLastProjectileId(int id) {
+		this.lastProjectileId = id;
 	}
 	
 	//We use this method to get this instance of your ability's lastShotTime value.
@@ -246,17 +261,17 @@ public class MultiShot extends AirAbility implements AddonAbility {
 	}
 	
 	//We use this method to get this instance of your ability's locations array.
-	public ArrayList<Location> getParticleLocations() {
+	public HashMap<Integer, Location> getParticleLocations() {
 		return this.locations;
 	}
 	
 	//We use this method to get this instance of your ability's directions array.
-	public ArrayList<Vector> getDirections() {
+	public HashMap<Integer, Vector> getDirections() {
 		return this.directions;
 	}
 	
 	//We use this method to get this instance of your ability's startLocations array.
-	public ArrayList<Location> getStartLocations() {
+	public HashMap<Integer, Location> getStartLocations() {
 		return this.startLocations;
 	}
 	
