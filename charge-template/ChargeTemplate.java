@@ -16,7 +16,7 @@ public class ChargeTemplate extends AirAbility implements AddonAbility {
 		
 		setField();
 		//DON'T PUT bPlayer.addCooldown(this); HERE.
-		//ADD THAT LINE BEFORE remove() LINES YOU WILL WROTE.
+		//ADD THAT LINE BEFORE remove() LINES YOU WILL WRITE.
 		//(EXCEPT THE remove() I MENTIONED IN STATE 0)
 		start();
 	}
